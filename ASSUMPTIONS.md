@@ -1,28 +1,23 @@
 # BBGM Career Oracle — Assumptions & Design Decisions
 
-This file documents the key assumptions and decisions made during the build.
-It is updated as each phase is completed.
+This file documents every design decision and assumption baked into the project.
+Update it whenever a decision changes.
 
 ---
 
-## Data & Simulation
+## Data Integrity
 
-- **Simulation length:** 20 years per BBGM export. This was chosen over 10 years to capture more complete careers.
-- **Complete careers only:** A player record is only imported if the player was *drafted* AND *retired* within the simulation window. Players who were pre-generated at league start (i.e., already in the league when the sim begins) are discarded. Players who are still active when the sim ends are also discarded. This is a hard data integrity rule — including incomplete careers would corrupt the projection model.
-- **OVR/POT/IQ scale:** All ratings use BBGM's native 20–80 scale.
-- **IQ calculation:** IQ is computed as the average of a player's offensive IQ (`oiq`) and defensive IQ (`diq`) from the BBGM export.
-- **Draft age range:** 18–22. Players drafted outside this range are excluded as outliers.
-- **Retirement age range:** 28–38. Players retiring outside this range are excluded as outliers.
-- **Two `players.json` files exist in the repo:** The correct target is `data/players.json`. The root-level `players.json` is a leftover artifact and should be ignored.
-
----
-
-## Player Attributes & Similarity
-
-- **Similarity attribute priority order:** Position (filter first) → Age (the anchor — match historical players at the same age) → OVR → POT → Height → IQ. Start small; expand attribute set as database grows.
-- **Age is the anchor:** The similarity engine finds historical players at the same age as the user's input player, then scores by other attributes. Do not over-engineer the attribute set early.
-- **Position matching:** BBGM sometimes lists multiple positions for a player (e.g., "PG-SG"). Only the **first position listed** is used for similarity matching. Multi-position support may be added in a future phase.
-- **Height storage:** Height is stored in the database as total inches (e.g., 6'4" = 76 inches). The frontend accepts feet and inches separately and converts to inches before matching.
+- **Complete careers only.** A player is valid only if they were drafted AND retired
+  within the simulation window. Pre-generated players present at league start are
+  excluded. Players still active when a simulation ends are excluded.
+- **Simulation length: 20 years.** Chosen to maximise the number of complete careers
+  captured per export.
+- **OVR/POT/IQ scale: 20–80.** Matches BBGM's native attribute scale.
+- **Draft age range: 18–22.** Players drafted outside this range are excluded.
+- **Retirement age range: 28–38.** Expected range; no hard filter applied.
+- **IQ is averaged.** Computed as the mean of `oiq` (offensive IQ) and `diq` (defensive IQ).
+- **Two `players.json` files exist in the repo.** The root-level file is ignored.
+  The correct file is always `data/players.json`.
 
 ---
 
@@ -31,62 +26,108 @@ It is updated as each phase is completed.
 Each player record in `data/players.json` contains:
 
 | Field        | Type             | Description                                      |
-|-------------|-----------------|--------------------------------------------------|
+|--------------|------------------|--------------------------------------------------|
 | `id`         | integer          | Auto-incremented unique ID                       |
-| `name`       | string           | Player name from BBGM export                    |
-| `position`   | string           | First position listed (PG, SG, SF, PF, C)       |
+| `name`       | string           | Player name from BBGM export                     |
+| `position`   | string           | PG / SG / SF / PF / C                           |
 | `height`     | integer          | Height in total inches                           |
-| `draft_age`  | integer          | Player's age when drafted                        |
-| `draft_ovr`  | integer          | OVR rating at time of draft                      |
-| `draft_pot`  | integer          | POT rating at time of draft                      |
-| `iq`         | float            | Average of oiq and diq at time of draft          |
-| `retire_age` | integer          | Player's age when retired                        |
-| `peak_ovr`   | integer          | Highest OVR rating reached during career         |
-| `ovr_by_age` | array of objects | `[{"age": 19, "ovr": 48}, ...]` — full trajectory |
+| `draft_age`  | integer          | Age at time of draft                             |
+| `draft_ovr`  | integer          | OVR rating in draft year                         |
+| `draft_pot`  | integer          | POT rating in draft year                         |
+| `iq`         | float            | Average of oiq and diq at draft                  |
+| `retire_age` | integer          | Age at retirement                                |
+| `peak_ovr`   | integer          | Highest OVR reached during career                |
+| `ovr_by_age` | array of objects | `[ { "age": 18, "ovr": 45 }, … ]` one per season|
 
 ---
 
-## Frontend
+## Similarity Algorithm
 
-- **User inputs:** OVR, POT, age, position, height (feet + inches separately), IQ.
-- **Height input:** Two separate number fields — one for feet, one for inches — each with its unit label displayed next to it. Tab order moves naturally from feet to inches.
-- **Projection output (Phase 5):** OVR-by-age graph with four percentile lines: 25th, 50th, 75th, and 95th.
-- **Phase 4 behavior:** After submitting the form, a "coming soon" message is displayed along with a summary of the entered values. The actual projection engine is Phase 5.
+- **Step 1 — Position filter.** Only players matching the queried position are considered.
+  Position is treated as a hard filter, not a scored attribute.
+- **Step 2 — Weighted distance scoring.** Each attribute is normalised to [0, 1]
+  within its expected range, then a weighted absolute difference is computed.
+  Lower score = more similar.
+
+### Attribute weights
+
+| Attribute | Weight | Normalisation range |
+|-----------|--------|---------------------|
+| OVR       | 30%    | 20 – 80             |
+| POT       | 25%    | 20 – 80             |
+| Age       | 25%    | 18 – 22             |
+| IQ        | 10%    | 20 – 80             |
+| Height    | 10%    | 60 – 90 inches      |
+
+- **Top N = 20.** The 20 most-similar players (lowest distance scores) are used
+  to build each projection.
+- **Minimum threshold = 5.** If fewer than 5 similar players are found, a warning
+  is displayed to the user indicating the projection may not be reliable.
+  If 0 players are found for a position, a separate "no data" message is shown.
+
+---
+
+## Projection Output
+
+- **Chart type:** Line chart (Chart.js v4).
+- **X-axis:** Age (e.g., 18 → 38). One data point per season per player.
+- **Y-axis:** OVR rating, fixed range 20–80.
+- **Four percentile curves:** 25th, 50th (median), 75th, and 95th.
+- **Percentile method:** Linear interpolation across sorted values at each age.
+  `null` is emitted for any age where no similar players have data (Chart.js spans the gap).
+- **The user's own player is not plotted on the chart.** The graph shows only
+  the historical distribution of similar players.
+
+---
+
+## Frontend Form — Input Constraints
+
+| Field      | Min    | Max    | Notes                              |
+|------------|--------|--------|------------------------------------|
+| OVR        | 20     | 80     |                                    |
+| POT        | 20     | 80     | Must be ≥ OVR                      |
+| Draft Age  | 18     | 22     |                                    |
+| IQ         | 20     | 80     |                                    |
+| Height     | 5'0"   | 7'6"   | Stored as total inches internally  |
+| Position   | PG–C   | —      | Dropdown; hard filter in algorithm |
+
+---
+
+## Hosting & Infrastructure
+
+- **Hosting:** GitHub Pages (free tier), static site only — no server-side code.
+- **GitHub organisation:** BBGM-Oracle
+- **Live URL:** https://bbgm-oracle.github.io/bbgm-oracle/
+- **Data file:** `data/players.json` — loaded via `fetch()` at page load.
+- **No build step.** The site is pure HTML/CSS/JavaScript — no npm, no bundler.
+- **Chart library:** Chart.js v4, loaded from CDN.
 
 ---
 
 ## Import Script (`import_bbgm.py`)
 
-- Handles both `gameAttributes` formats found in BBGM exports (list format and dict format).
-- Determines the simulation start season automatically from `gameAttributes`.
-- Appends new players to `data/players.json` with auto-incremented IDs (no duplicates overwritten).
-- Skips players who do not meet the complete-career criteria described above.
-
----
-
-## Hosting & Workflow
-
-- **Hosting:** GitHub Pages (free tier). The live site is at `https://bbgm-oracle.github.io/bbgm-oracle/`.
-- **GitHub username:** BBGM-Oracle
-- **Local development path:** `C:\Users\travi\OneDrive\Desktop\Website\bbgm-oracle\`
-- **Update workflow:** Python scripts run locally via Command Prompt. Output files are uploaded manually to GitHub via the web interface.
-- **Browser for testing:** Firefox.
-- **Local HTML tool note:** The separate local tool (`bbgm-career-oracle.html`) requires a Python local server to function due to browser file security restrictions. Run `python -m http.server 8000` in its directory and open `http://localhost:8000`.
+- Handles both `gameAttributes` formats: list of objects and plain dict.
+- Determines simulation start season automatically.
+- Filters for complete careers (drafted + retired within the window).
+- Computes IQ as the mean of `oiq` and `diq` from the draft year.
+- Builds `ovr_by_age` trajectories from season-by-season ratings.
+- Appends to `data/players.json` with auto-incremented IDs (no duplicates within a run;
+  re-running the same export will add duplicate records — avoid importing the same file twice).
 
 ---
 
 ## Build Phases
 
-| Phase | Description                              | Status      |
-|-------|------------------------------------------|-------------|
-| 1     | GitHub setup                             | ✅ Complete |
-| 2     | Database schema + fake test data script  | ✅ Complete |
-| 3     | Python BBGM import script                | ✅ Complete |
-| 4     | Frontend input form                      | ✅ Complete |
-| 5     | Similarity algorithm + Chart.js projection | 🔲 Next    |
-| 6     | Integration & testing                    | 🔲 Pending  |
-| 7     | Admin update workflow                    | 🔲 Pending  |
+| Phase | Description                             | Status      |
+|-------|-----------------------------------------|-------------|
+| 1     | GitHub setup                            | ✅ Complete |
+| 2     | Database schema + fake data script      | ✅ Complete |
+| 3     | Python BBGM import script               | ✅ Complete |
+| 4     | Frontend form                           | ✅ Complete |
+| 5     | Similarity algorithm + Chart.js graph   | ✅ Complete |
+| 6     | Integration & testing                   | ⬜ Upcoming |
+| 7     | Admin update workflow                   | ⬜ Upcoming |
 
 ---
 
-*Last updated: Phase 4 complete*
+*Last updated: Phase 5 complete.*

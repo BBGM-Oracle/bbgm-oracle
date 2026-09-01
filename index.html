@@ -4,372 +4,273 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BBGM Career Oracle</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    /* ── Tokens ─────────────────────────────────────────── */
-    :root {
-      --bg:          #0f1117;
-      --surface:     #1a1d27;
-      --border:      #2a2e3f;
-      --accent:      #4a8fe8;
-      --accent-dim:  #2a5a9e;
-      --text:        #e2e6f0;
-      --text-muted:  #7a8099;
-      --green:       #3ecf8e;
-      --red:         #e25c5c;
-      --radius:      8px;
-      --font-mono:   'Courier New', monospace;
-    }
-
-    /* ── Reset ───────────────────────────────────────────── */
+    /* ── Reset & base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --bg-deep:    #0f1117;
+      --bg-card:    #181c27;
+      --bg-input:   #1e2333;
+      --border:     #2a3045;
+      --accent:     #4a8ff5;
+      --accent-dim: #2a5aaa;
+      --text-hi:    #e8eaf0;
+      --text-mid:   #9aa3b8;
+      --text-lo:    #5a6380;
+      --good:       #3ecf8e;
+      --warn:       #f0a030;
+      --danger:     #e05252;
+
+      /* percentile band colours */
+      --p95: rgba(74,143,245,0.90);
+      --p75: rgba(62,207,142,0.80);
+      --p50: rgba(240,160,48,0.80);
+      --p25: rgba(224,82,82,0.70);
+    }
+
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-hi);
+      font-family: 'Segoe UI', system-ui, sans-serif;
       font-size: 15px;
-      line-height: 1.6;
+      line-height: 1.5;
       min-height: 100vh;
     }
 
-    /* ── Layout ──────────────────────────────────────────── */
-    .page-wrap {
-      max-width: 680px;
+    /* ── Layout shell ── */
+    .shell {
+      max-width: 780px;
       margin: 0 auto;
-      padding: 48px 24px 80px;
+      padding: 32px 20px 60px;
     }
 
-    /* ── Header ──────────────────────────────────────────── */
+    /* ── Header ── */
     header {
-      margin-bottom: 40px;
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-hi);
+    }
+    header h1 span {
+      color: var(--accent);
+    }
+    header p {
+      margin-top: 6px;
+      color: var(--text-mid);
+      font-size: 0.9rem;
     }
 
-    .wordmark {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-      margin-bottom: 8px;
+    /* ── Card ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 28px 24px;
+      margin-bottom: 20px;
     }
-
-    .wordmark-bbgm {
-      font-size: 13px;
+    .card-title {
+      font-size: 0.7rem;
       font-weight: 600;
       letter-spacing: 0.12em;
-      color: var(--accent);
       text-transform: uppercase;
+      color: var(--text-lo);
+      margin-bottom: 22px;
     }
 
-    .wordmark-title {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.02em;
-    }
-
-    header p {
-      color: var(--text-muted);
-      font-size: 14px;
-      max-width: 480px;
-    }
-
-    /* ── Card ────────────────────────────────────────────── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 32px;
-    }
-
-    .card-title {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      margin-bottom: 24px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    /* ── Form layout ─────────────────────────────────────── */
+    /* ── Form grid ── */
     .form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      gap: 18px 24px;
     }
+    @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } }
 
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .field.full-width {
-      grid-column: 1 / -1;
-    }
-
-    /* Height gets two small boxes side by side */
-    .height-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .height-group input {
-      width: 64px;
-    }
-
-    .height-sep {
-      color: var(--text-muted);
-      font-size: 13px;
-      flex-shrink: 0;
-    }
-
-    /* ── Labels ──────────────────────────────────────────── */
-    label {
-      font-size: 13px;
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label {
+      font-size: 0.82rem;
+      color: var(--text-mid);
       font-weight: 500;
-      color: var(--text-muted);
+    }
+    .field .hint {
+      font-size: 0.72rem;
+      color: var(--text-lo);
+      margin-top: 2px;
     }
 
-    /* ── Inputs / Selects ────────────────────────────────── */
     input[type="number"],
     select {
-      background: var(--bg);
+      background: var(--bg-input);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      font-size: 15px;
-      padding: 8px 12px;
+      border-radius: 7px;
+      color: var(--text-hi);
+      font-size: 1rem;
+      padding: 9px 12px;
       width: 100%;
       transition: border-color 0.15s;
       appearance: none;
-      -webkit-appearance: none;
     }
-
     input[type="number"]:focus,
     select:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(74,143,232,0.15);
     }
+    input[type="number"].invalid { border-color: var(--danger); }
 
-    input[type="number"]::placeholder {
-      color: var(--text-muted);
-    }
+    /* height row */
+    .height-row { display: flex; align-items: center; gap: 8px; }
+    .height-row input { flex: 1; }
+    .height-row .unit { color: var(--text-lo); font-size: 0.82rem; white-space: nowrap; }
 
-    /* Remove spinner arrows */
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
-    input[type="number"] { -moz-appearance: textfield; }
+    /* position full-width */
+    .field.full { grid-column: 1 / -1; }
+    select { cursor: pointer; }
 
-    /* Select arrow */
-    .select-wrap {
-      position: relative;
-    }
-
-    .select-wrap::after {
-      content: '▾';
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      pointer-events: none;
-      font-size: 12px;
-    }
-
-    .select-wrap select {
-      padding-right: 32px;
-      cursor: pointer;
-    }
-
-    /* Unit labels that sit next to height boxes */
-    .unit-label {
-      font-size: 13px;
-      color: var(--text-muted);
-      flex-shrink: 0;
-      white-space: nowrap;
-    }
-
-    /* Range hints below number inputs */
-    .hint {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    /* ── Divider ─────────────────────────────────────────── */
-    .divider {
-      grid-column: 1 / -1;
-      height: 1px;
-      background: var(--border);
-      margin: 4px 0;
-    }
-
-    /* ── Submit button ───────────────────────────────────── */
-    .submit-row {
-      grid-column: 1 / -1;
-      margin-top: 8px;
-    }
-
-    .btn-primary {
+    /* ── Submit button ── */
+    .btn-project {
+      display: block;
       width: 100%;
-      padding: 12px;
+      margin-top: 24px;
+      padding: 14px;
       background: var(--accent);
       color: #fff;
-      border: none;
-      border-radius: var(--radius);
-      font-size: 15px;
+      font-size: 1rem;
       font-weight: 600;
+      border: none;
+      border-radius: 9px;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-project:hover  { background: #5a9fff; }
+    .btn-project:active { transform: scale(0.99); }
+    .btn-project:disabled { background: var(--accent-dim); cursor: not-allowed; }
+
+    /* ── Result area ── */
+    #result-area { display: none; }
+
+    /* stat summary row */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .stat-cell {
+      background: var(--bg-input);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .stat-cell .label { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-lo); }
+    .stat-cell .value { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+
+    /* chart wrapper */
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      height: 320px;
+      margin-bottom: 16px;
     }
 
-    .btn-primary:hover {
-      background: #5b9ffa;
+    /* legend */
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 20px;
+      margin-bottom: 8px;
     }
-
-    .btn-primary:active {
-      background: var(--accent-dim);
-    }
-
-    /* ── Result area ─────────────────────────────────────── */
-    #result {
-      margin-top: 24px;
-      padding: 20px 24px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      display: none;
-    }
-
-    #result.visible {
-      display: block;
-    }
-
-    .result-coming-soon {
+    .legend-item {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 7px;
+      font-size: 0.78rem;
+      color: var(--text-mid);
     }
-
-    .result-icon {
-      font-size: 28px;
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
       flex-shrink: 0;
     }
 
-    .result-text h3 {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 4px;
+    /* match count note */
+    .match-note {
+      font-size: 0.78rem;
+      color: var(--text-lo);
+      text-align: right;
+      margin-top: 6px;
     }
 
-    .result-text p {
-      font-size: 13px;
-      color: var(--text-muted);
+    /* warning banner */
+    .warn-banner {
+      background: rgba(240,160,48,0.12);
+      border: 1px solid rgba(240,160,48,0.35);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.84rem;
+      color: var(--warn);
+      margin-bottom: 18px;
     }
 
-    .result-summary {
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-    }
-
-    .summary-item {
+    /* placeholder (shown before first projection) */
+    #placeholder {
       display: flex;
-      flex-direction: column;
-      gap: 2px;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 8px 0 4px;
     }
+    .placeholder-icon { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
+    .placeholder-text h3 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+    .placeholder-text p  { font-size: 0.84rem; color: var(--text-mid); }
 
-    .summary-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    .summary-value {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--accent);
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* ── Validation ──────────────────────────────────────── */
-    input.invalid,
-    select.invalid {
-      border-color: var(--red);
-    }
-
-    .error-msg {
-      font-size: 11px;
-      color: var(--red);
-      margin-top: 2px;
+    /* loading spinner */
+    #loading {
       display: none;
-    }
-
-    .error-msg.visible {
-      display: block;
-    }
-
-    /* ── Footer ──────────────────────────────────────────── */
-    footer {
-      margin-top: 48px;
-      font-size: 12px;
-      color: var(--text-muted);
       text-align: center;
+      padding: 32px 0;
+      color: var(--text-mid);
+      font-size: 0.9rem;
     }
-
-    footer a {
-      color: var(--accent);
-      text-decoration: none;
+    .spinner {
+      display: inline-block;
+      width: 28px; height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 10px;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    footer a:hover {
-      text-decoration: underline;
-    }
-
-    /* ── Responsive ──────────────────────────────────────── */
-    @media (max-width: 520px) {
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .field.full-width {
-        grid-column: 1;
-      }
-
-      .submit-row {
-        grid-column: 1;
-      }
-
-      .divider {
-        grid-column: 1;
-      }
-
-      .result-summary {
-        grid-template-columns: repeat(2, 1fr);
-      }
+    /* error state */
+    #error-msg {
+      display: none;
+      color: var(--danger);
+      font-size: 0.85rem;
+      margin-top: 8px;
     }
   </style>
 </head>
 <body>
+<div class="shell">
 
-<div class="page-wrap">
-
+  <!-- Header -->
   <header>
-    <div class="wordmark">
-      <span class="wordmark-bbgm">BBGM</span>
-      <span class="wordmark-title">Career Oracle</span>
-    </div>
-    <p>Enter a player's draft-day attributes to see how similar players' careers developed — projected OVR by age, from a database of simulated careers.</p>
+    <h1>BBGM <span>Career Oracle</span></h1>
+    <p>Enter a player's draft attributes to project their OVR trajectory</p>
   </header>
 
+  <!-- Input card -->
   <div class="card">
     <div class="card-title">Player Attributes</div>
 
@@ -377,254 +278,544 @@
 
       <!-- OVR -->
       <div class="field">
-        <label for="ovr">Overall Rating (OVR)</label>
-        <input
-          type="number"
-          id="ovr"
-          name="ovr"
-          min="20" max="80"
-          placeholder="e.g. 48"
-          autocomplete="off"
-        />
+        <label for="inp-ovr">Overall Rating (OVR)</label>
+        <input type="number" id="inp-ovr" min="20" max="80" value="45" />
         <span class="hint">20 – 80</span>
-        <span class="error-msg" id="ovr-error">Enter a value between 20 and 80.</span>
       </div>
 
       <!-- POT -->
       <div class="field">
-        <label for="pot">Potential (POT)</label>
-        <input
-          type="number"
-          id="pot"
-          name="pot"
-          min="20" max="80"
-          placeholder="e.g. 65"
-          autocomplete="off"
-        />
+        <label for="inp-pot">Potential (POT)</label>
+        <input type="number" id="inp-pot" min="20" max="80" value="67" />
         <span class="hint">20 – 80</span>
-        <span class="error-msg" id="pot-error">Enter a value between 20 and 80.</span>
       </div>
 
-      <!-- Age -->
+      <!-- Draft Age -->
       <div class="field">
-        <label for="age">Draft Age</label>
-        <input
-          type="number"
-          id="age"
-          name="age"
-          min="18" max="22"
-          placeholder="e.g. 19"
-          autocomplete="off"
-        />
+        <label for="inp-age">Draft Age</label>
+        <input type="number" id="inp-age" min="18" max="22" value="19" />
         <span class="hint">18 – 22</span>
-        <span class="error-msg" id="age-error">Enter a value between 18 and 22.</span>
       </div>
 
       <!-- IQ -->
       <div class="field">
-        <label for="iq">IQ</label>
-        <input
-          type="number"
-          id="iq"
-          name="iq"
-          min="20" max="80"
-          placeholder="e.g. 50"
-          autocomplete="off"
-        />
+        <label for="inp-iq">IQ</label>
+        <input type="number" id="inp-iq" min="20" max="80" value="50" />
         <span class="hint">20 – 80</span>
-        <span class="error-msg" id="iq-error">Enter a value between 20 and 80.</span>
       </div>
 
-      <div class="divider"></div>
-
-      <!-- Position -->
-      <div class="field">
-        <label for="position">Position</label>
-        <div class="select-wrap">
-          <select id="position" name="position">
-            <option value="" disabled selected>Select position</option>
-            <option value="PG">PG — Point Guard</option>
-            <option value="SG">SG — Shooting Guard</option>
-            <option value="SF">SF — Small Forward</option>
-            <option value="PF">PF — Power Forward</option>
-            <option value="C">C — Center</option>
-          </select>
-        </div>
-        <span class="error-msg" id="position-error">Please select a position.</span>
+      <!-- Position (full width) -->
+      <div class="field full">
+        <label for="inp-pos">Position</label>
+        <select id="inp-pos">
+          <option value="PG">PG — Point Guard</option>
+          <option value="SG">SG — Shooting Guard</option>
+          <option value="SF">SF — Small Forward</option>
+          <option value="PF">PF — Power Forward</option>
+          <option value="C">C — Center</option>
+        </select>
       </div>
 
       <!-- Height -->
-      <div class="field">
+      <div class="field full">
         <label>Height</label>
-        <div class="height-group">
-          <input
-            type="number"
-            id="height-ft"
-            name="height-ft"
-            min="5" max="7"
-            placeholder="6"
-            autocomplete="off"
-            aria-label="Feet"
-          />
-          <span class="unit-label">ft</span>
-          <input
-            type="number"
-            id="height-in"
-            name="height-in"
-            min="0" max="11"
-            placeholder="4"
-            autocomplete="off"
-            aria-label="Inches"
-          />
-          <span class="unit-label">in</span>
+        <div class="height-row">
+          <input type="number" id="inp-ft" min="5" max="7" value="5" />
+          <span class="unit">ft</span>
+          <input type="number" id="inp-in" min="0" max="11" value="11" />
+          <span class="unit">in</span>
         </div>
         <span class="hint">5 ft 0 in – 7 ft 6 in</span>
-        <span class="error-msg" id="height-error">Enter a valid height (feet 5–7, inches 0–11).</span>
-      </div>
-
-      <!-- Submit -->
-      <div class="submit-row">
-        <button class="btn-primary" id="submit-btn" type="button">
-          Project Career
-        </button>
       </div>
 
     </div><!-- /form-grid -->
 
-    <!-- Result area -->
-    <div id="result">
-      <div class="result-coming-soon">
-        <div class="result-icon">🏀</div>
-        <div class="result-text">
-          <h3>Projection coming soon</h3>
-          <p>The similarity engine and OVR trajectory chart are under development. Check back soon — the database is growing.</p>
-        </div>
-      </div>
-      <div class="result-summary" id="result-summary">
-        <!-- filled by JS -->
+    <div id="error-msg">Please fix the highlighted fields before projecting.</div>
+    <button class="btn-project" id="btn-project">Project Career</button>
+
+  </div><!-- /input card -->
+
+  <!-- Output card -->
+  <div class="card" id="output-card">
+
+    <!-- placeholder shown before any projection -->
+    <div id="placeholder">
+      <div class="placeholder-icon">🏀</div>
+      <div class="placeholder-text">
+        <h3>Projection coming soon</h3>
+        <p>The similarity engine and OVR trajectory chart are under development. Check back soon — the database is growing.</p>
       </div>
     </div>
 
-  </div><!-- /card -->
+    <!-- loading state -->
+    <div id="loading">
+      <span class="spinner"></span>Searching similar careers…
+    </div>
 
-  <footer>
-    Powered by simulated careers from <a href="https://basketball-gm.com" target="_blank" rel="noopener">basketball-gm.com</a> &nbsp;·&nbsp;
-    <a href="https://github.com/BBGM-Oracle/bbgm-oracle" target="_blank" rel="noopener">GitHub</a>
-  </footer>
+    <!-- result area (hidden until a projection runs) -->
+    <div id="result-area">
 
-</div><!-- /page-wrap -->
+      <!-- Stat summary -->
+      <div class="stat-row">
+        <div class="stat-cell">
+          <span class="label">Position</span>
+          <span class="value" id="res-pos">—</span>
+        </div>
+        <div class="stat-cell">
+          <span class="label">Height</span>
+          <span class="value" id="res-ht">—</span>
+        </div>
+        <div class="stat-cell">
+          <span class="label">Draft Age</span>
+          <span class="value" id="res-age">—</span>
+        </div>
+      </div>
+      <div class="stat-row" style="margin-top:-16px;">
+        <div class="stat-cell">
+          <span class="label">OVR</span>
+          <span class="value" id="res-ovr">—</span>
+        </div>
+        <div class="stat-cell">
+          <span class="label">POT</span>
+          <span class="value" id="res-pot">—</span>
+        </div>
+        <div class="stat-cell">
+          <span class="label">IQ</span>
+          <span class="value" id="res-iq">—</span>
+        </div>
+      </div>
+
+      <!-- Low-data warning (shown only when < MIN_PLAYERS matched) -->
+      <div id="warn-low" class="warn-banner" style="display:none">
+        ⚠️ Fewer than 5 similar players found. This projection may not be reliable — try adding more simulations to the database.
+      </div>
+
+      <!-- Legend -->
+      <div class="chart-legend">
+        <div class="legend-item"><span class="legend-dot" style="background:var(--p95)"></span>95th percentile</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--p75)"></span>75th percentile</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--p50)"></span>50th percentile (median)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:var(--p25)"></span>25th percentile</div>
+      </div>
+
+      <!-- Chart -->
+      <div class="chart-wrap">
+        <canvas id="proj-chart"></canvas>
+      </div>
+
+      <div class="match-note" id="match-note"></div>
+
+    </div><!-- /result-area -->
+
+  </div><!-- /output card -->
+
+</div><!-- /shell -->
 
 <script>
-  // ── Field definitions ────────────────────────────────────
-  const fields = [
-    { id: 'ovr',      min: 20, max: 80, label: 'OVR'       },
-    { id: 'pot',      min: 20, max: 80, label: 'POT'       },
-    { id: 'age',      min: 18, max: 22, label: 'Age'       },
-    { id: 'iq',       min: 20, max: 80, label: 'IQ'        },
-  ];
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+const TOP_N        = 20;   // number of similar players to use
+const MIN_PLAYERS  =  5;   // warn if fewer matches than this
 
-  // ── Validation helpers ───────────────────────────────────
-  function setInvalid(id, show) {
-    const el  = document.getElementById(id);
-    const err = document.getElementById(id + '-error');
-    if (!el) return;
-    el.classList.toggle('invalid', show);
-    if (err) err.classList.toggle('visible', show);
+// Attribute weights for similarity scoring
+// Lower score = more similar (like a "distance")
+const WEIGHTS = {
+  ovr:    0.30,
+  pot:    0.25,
+  age:    0.25,
+  iq:     0.10,
+  height: 0.10
+};
+
+// Height scale: BBGM stores height in inches
+// Our players.json stores height as total inches
+function feetInchesToInches(ft, inches) {
+  return ft * 12 + parseInt(inches || 0);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOAD DATABASE
+// ═══════════════════════════════════════════════════════════════
+let playerDB = [];
+
+async function loadDatabase() {
+  try {
+    const res = await fetch('data/players.json');
+    if (!res.ok) throw new Error('fetch failed');
+    const json = await res.json();
+    playerDB = Array.isArray(json) ? json : [];
+  } catch (e) {
+    playerDB = [];
+    console.warn('Could not load data/players.json — running with empty database.', e);
   }
+}
 
-  function validateAll() {
-    let ok = true;
+// ═══════════════════════════════════════════════════════════════
+// SIMILARITY ENGINE
+// ═══════════════════════════════════════════════════════════════
 
-    // Numeric fields
-    for (const f of fields) {
-      const el  = document.getElementById(f.id);
-      const val = parseInt(el.value, 10);
-      const bad = isNaN(val) || val < f.min || val > f.max;
-      setInvalid(f.id, bad);
-      if (bad) ok = false;
+/**
+ * Normalise a value within [min, max] to [0, 1].
+ */
+function norm(val, min, max) {
+  if (max === min) return 0;
+  return (val - min) / (max - min);
+}
+
+/**
+ * Score ranges (constants used for normalisation).
+ */
+const RANGES = {
+  ovr:    { min: 20, max: 80 },
+  pot:    { min: 20, max: 80 },
+  age:    { min: 18, max: 22 },
+  iq:     { min: 20, max: 80 },
+  height: { min: 60, max: 90 } // inches: 5'0" to 7'6"
+};
+
+/**
+ * Compute a weighted distance score between a query and a DB player.
+ * Both must have position already filtered.
+ * Returns 0 (identical) → 1 (maximally different).
+ */
+function similarityScore(query, player) {
+  const dOvr    = Math.abs(norm(query.ovr,    RANGES.ovr.min,    RANGES.ovr.max)    - norm(player.draft_ovr, RANGES.ovr.min,    RANGES.ovr.max));
+  const dPot    = Math.abs(norm(query.pot,    RANGES.pot.min,    RANGES.pot.max)    - norm(player.draft_pot, RANGES.pot.min,    RANGES.pot.max));
+  const dAge    = Math.abs(norm(query.age,    RANGES.age.min,    RANGES.age.max)    - norm(player.draft_age, RANGES.age.min,    RANGES.age.max));
+  const dIq     = Math.abs(norm(query.iq,     RANGES.iq.min,     RANGES.iq.max)     - norm(player.iq,        RANGES.iq.min,     RANGES.iq.max));
+  const dHeight = Math.abs(norm(query.height, RANGES.height.min, RANGES.height.max) - norm(player.height,    RANGES.height.min, RANGES.height.max));
+
+  return (
+    WEIGHTS.ovr    * dOvr    +
+    WEIGHTS.pot    * dPot    +
+    WEIGHTS.age    * dAge    +
+    WEIGHTS.iq     * dIq     +
+    WEIGHTS.height * dHeight
+  );
+}
+
+/**
+ * Find the TOP_N most-similar players for the given query.
+ * Step 1: filter by position.
+ * Step 2: score remaining, sort ascending, take top N.
+ */
+function findSimilarPlayers(query) {
+  // Step 1 — position filter
+  const posMatches = playerDB.filter(p => p.position === query.position);
+
+  // Step 2 — score & sort
+  const scored = posMatches.map(p => ({
+    player: p,
+    score:  similarityScore(query, p)
+  }));
+  scored.sort((a, b) => a.score - b.score);
+
+  return scored.slice(0, TOP_N).map(s => s.player);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROJECTION BUILDER
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Given a list of similar players (each with ovr_by_age array),
+ * compute four percentile curves across all ages they share.
+ *
+ * ovr_by_age format: [ { age: 18, ovr: 45 }, ... ]
+ *
+ * Returns: { ages: [...], p25: [...], p50: [...], p75: [...], p95: [...] }
+ */
+function buildProjection(similarPlayers) {
+  // Gather all ages present across any player
+  const ageSet = new Set();
+  similarPlayers.forEach(p => {
+    (p.ovr_by_age || []).forEach(pt => ageSet.add(pt.age));
+  });
+  const ages = Array.from(ageSet).sort((a, b) => a - b);
+
+  const p25 = [], p50 = [], p75 = [], p95 = [];
+
+  ages.forEach(age => {
+    // Collect OVR values at this age from each player who has data for it
+    const vals = [];
+    similarPlayers.forEach(p => {
+      const pt = (p.ovr_by_age || []).find(x => x.age === age);
+      if (pt !== undefined) vals.push(pt.ovr);
+    });
+
+    if (vals.length === 0) {
+      // No data for this age — push null so Chart.js spans the gap
+      p25.push(null); p50.push(null); p75.push(null); p95.push(null);
+      return;
     }
 
-    // Position
-    const pos = document.getElementById('position');
-    const posBad = !pos.value;
-    pos.classList.toggle('invalid', posBad);
-    document.getElementById('position-error').classList.toggle('visible', posBad);
-    if (posBad) ok = false;
+    vals.sort((a, b) => a - b);
+    p25.push(percentile(vals, 25));
+    p50.push(percentile(vals, 50));
+    p75.push(percentile(vals, 75));
+    p95.push(percentile(vals, 95));
+  });
 
-    // Height
-    const ft  = parseInt(document.getElementById('height-ft').value, 10);
-    const inc = parseInt(document.getElementById('height-in').value, 10);
-    const htBad = isNaN(ft) || isNaN(inc) || ft < 5 || ft > 7 || inc < 0 || inc > 11;
-    document.getElementById('height-ft').classList.toggle('invalid', htBad);
-    document.getElementById('height-in').classList.toggle('invalid', htBad);
-    document.getElementById('height-error').classList.toggle('visible', htBad);
-    if (htBad) ok = false;
+  return { ages, p25, p50, p75, p95 };
+}
 
-    return ok;
+/**
+ * Linear-interpolated percentile of a sorted array.
+ */
+function percentile(sorted, p) {
+  if (sorted.length === 0) return null;
+  if (sorted.length === 1) return sorted[0];
+
+  const idx = (p / 100) * (sorted.length - 1);
+  const lo  = Math.floor(idx);
+  const hi  = Math.ceil(idx);
+  const frac = idx - lo;
+  return sorted[lo] + frac * (sorted[hi] - sorted[lo]);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHART
+// ═══════════════════════════════════════════════════════════════
+let chartInstance = null;
+
+const CHART_COLORS = {
+  p95: { line: 'rgba(74,143,245,1)',   fill: 'rgba(74,143,245,0.08)'  },
+  p75: { line: 'rgba(62,207,142,1)',   fill: 'rgba(62,207,142,0.08)'  },
+  p50: { line: 'rgba(240,160,48,1)',   fill: 'rgba(240,160,48,0.08)'  },
+  p25: { line: 'rgba(224,82,82,1)',    fill: 'rgba(224,82,82,0.08)'   },
+};
+
+function renderChart(projection) {
+  const ctx = document.getElementById('proj-chart').getContext('2d');
+
+  if (chartInstance) {
+    chartInstance.destroy();
+    chartInstance = null;
   }
 
-  // Clear error on input
-  for (const f of fields) {
-    document.getElementById(f.id).addEventListener('input', () => setInvalid(f.id, false));
+  const labels = projection.ages.map(a => `Age ${a}`);
+
+  const makeDataset = (label, data, colors) => ({
+    label,
+    data,
+    borderColor:     colors.line,
+    backgroundColor: colors.fill,
+    borderWidth: 2.5,
+    pointRadius: 0,
+    tension: 0.35,
+    fill: false,
+    spanGaps: true
+  });
+
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        makeDataset('95th percentile', projection.p95, CHART_COLORS.p95),
+        makeDataset('75th percentile', projection.p75, CHART_COLORS.p75),
+        makeDataset('50th (median)',   projection.p50, CHART_COLORS.p50),
+        makeDataset('25th percentile', projection.p25, CHART_COLORS.p25),
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false }, // we use our own custom legend above
+        tooltip: {
+          backgroundColor: '#1e2333',
+          borderColor: '#2a3045',
+          borderWidth: 1,
+          titleColor: '#9aa3b8',
+          bodyColor: '#e8eaf0',
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y !== null ? Math.round(ctx.parsed.y) : '—'}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#5a6380', font: { size: 11 }, maxRotation: 0 },
+          grid:  { color: 'rgba(42,48,69,0.6)' }
+        },
+        y: {
+          min: 20,
+          max: 80,
+          ticks: { color: '#5a6380', font: { size: 11 }, stepSize: 10 },
+          grid:  { color: 'rgba(42,48,69,0.6)' },
+          title: {
+            display: true,
+            text: 'OVR',
+            color: '#5a6380',
+            font: { size: 11 }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INPUT VALIDATION
+// ═══════════════════════════════════════════════════════════════
+function getAndValidateInputs() {
+  let valid = true;
+  const errors = [];
+
+  function readNum(id, min, max, label) {
+    const el  = document.getElementById(id);
+    const val = parseInt(el.value, 10);
+    el.classList.remove('invalid');
+    if (isNaN(val) || val < min || val > max) {
+      el.classList.add('invalid');
+      errors.push(`${label} must be ${min}–${max}`);
+      valid = false;
+      return null;
+    }
+    return val;
   }
-  document.getElementById('position').addEventListener('change', () => {
-    document.getElementById('position').classList.remove('invalid');
-    document.getElementById('position-error').classList.remove('visible');
-  });
-  ['height-ft','height-in'].forEach(id => {
-    document.getElementById(id).addEventListener('input', () => {
-      document.getElementById('height-ft').classList.remove('invalid');
-      document.getElementById('height-in').classList.remove('invalid');
-      document.getElementById('height-error').classList.remove('visible');
-    });
-  });
 
-  // ── Submit ───────────────────────────────────────────────
-  document.getElementById('submit-btn').addEventListener('click', () => {
-    if (!validateAll()) return;
+  const ovr = readNum('inp-ovr', 20, 80, 'OVR');
+  const pot = readNum('inp-pot', 20, 80, 'POT');
+  const age = readNum('inp-age', 18, 22, 'Draft Age');
+  const iq  = readNum('inp-iq',  20, 80, 'IQ');
+  const ft  = readNum('inp-ft',   5,  7, 'Feet');
+  const inc = readNum('inp-in',   0, 11, 'Inches');
 
-    const ovr = document.getElementById('ovr').value;
-    const pot = document.getElementById('pot').value;
-    const age = document.getElementById('age').value;
-    const iq  = document.getElementById('iq').value;
-    const pos = document.getElementById('position').value;
-    const ft  = document.getElementById('height-ft').value;
-    const inc = document.getElementById('height-in').value;
+  // POT must be ≥ OVR
+  if (ovr !== null && pot !== null && pot < ovr) {
+    document.getElementById('inp-pot').classList.add('invalid');
+    errors.push('POT must be ≥ OVR');
+    valid = false;
+  }
 
-    // Show coming-soon result with a summary of what was entered
-    const summary = document.getElementById('result-summary');
-    summary.innerHTML = `
-      <div class="summary-item">
-        <span class="summary-label">Position</span>
-        <span class="summary-value">${pos}</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">Height</span>
-        <span class="summary-value">${ft}'${inc}"</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">Age</span>
-        <span class="summary-value">${age}</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">OVR</span>
-        <span class="summary-value">${ovr}</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">POT</span>
-        <span class="summary-value">${pot}</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">IQ</span>
-        <span class="summary-value">${iq}</span>
-      </div>
-    `;
+  // Height bounds: 5'0" – 7'6"
+  if (ft !== null && inc !== null) {
+    const totalIn = feetInchesToInches(ft, inc);
+    if (totalIn < 60 || totalIn > 90) {
+      document.getElementById('inp-ft').classList.add('invalid');
+      document.getElementById('inp-in').classList.add('invalid');
+      errors.push('Height must be 5\'0" – 7\'6"');
+      valid = false;
+    }
+  }
 
-    const result = document.getElementById('result');
-    result.classList.add('visible');
-    result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  });
+  const position = document.getElementById('inp-pos').value;
+
+  if (!valid) return { valid: false, errors };
+
+  return {
+    valid: true,
+    query: {
+      ovr,
+      pot,
+      age,
+      iq,
+      height: feetInchesToInches(ft, inc),
+      position,
+      ft,
+      inc
+    }
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DISPLAY HELPERS
+// ═══════════════════════════════════════════════════════════════
+function showLoading()  {
+  document.getElementById('placeholder').style.display  = 'none';
+  document.getElementById('result-area').style.display  = 'none';
+  document.getElementById('loading').style.display      = 'block';
+}
+function hideLoading()  { document.getElementById('loading').style.display = 'none'; }
+
+function formatHeight(ft, inc) { return `${ft}'${String(inc).padStart(2,'0')}"`; }
+
+function fillSummary(query, matchCount) {
+  document.getElementById('res-pos').textContent = query.position;
+  document.getElementById('res-ht').textContent  = formatHeight(query.ft, query.inc);
+  document.getElementById('res-age').textContent = query.age;
+  document.getElementById('res-ovr').textContent = query.ovr;
+  document.getElementById('res-pot').textContent = query.pot;
+  document.getElementById('res-iq').textContent  = query.iq;
+
+  const note = document.getElementById('match-note');
+  note.textContent = `Based on ${matchCount} similar player${matchCount === 1 ? '' : 's'} in the database`;
+
+  const warnEl = document.getElementById('warn-low');
+  warnEl.style.display = matchCount < MIN_PLAYERS ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN PROJECT HANDLER
+// ═══════════════════════════════════════════════════════════════
+async function runProjection() {
+  // Clear previous errors
+  document.getElementById('error-msg').style.display = 'none';
+
+  const result = getAndValidateInputs();
+  if (!result.valid) {
+    document.getElementById('error-msg').textContent =
+      result.errors.join(' · ');
+    document.getElementById('error-msg').style.display = 'block';
+    return;
+  }
+
+  const { query } = result;
+
+  showLoading();
+
+  // Give the browser a frame to paint the spinner before the sync work
+  await new Promise(r => setTimeout(r, 40));
+
+  // Find similar players
+  const similar = findSimilarPlayers(query);
+
+  if (similar.length === 0) {
+    hideLoading();
+    document.getElementById('loading').style.display = 'none';
+
+    // Show no-data message inside result area without the chart
+    fillSummary(query, 0);
+    document.getElementById('warn-low').style.display = 'block';
+    document.getElementById('warn-low').textContent =
+      '⚠️ No players found for this position in the database yet. Run more simulations and import them to generate a projection.';
+    document.getElementById('result-area').style.display = 'block';
+
+    // Hide chart wrap since there's nothing to draw
+    document.querySelector('.chart-wrap').style.display   = 'none';
+    document.querySelector('.chart-legend').style.display = 'none';
+    return;
+  }
+
+  // Restore chart visibility (may have been hidden on a previous 0-match run)
+  document.querySelector('.chart-wrap').style.display   = 'block';
+  document.querySelector('.chart-legend').style.display = 'flex';
+
+  // Build projection data
+  const projection = buildProjection(similar);
+
+  // Render chart
+  renderChart(projection);
+
+  // Update summary
+  fillSummary(query, similar.length);
+
+  // Swap loading → results
+  hideLoading();
+  document.getElementById('result-area').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('btn-project').addEventListener('click', runProjection);
+
+// Load the database on page open
+loadDatabase().catch(console.error);
 </script>
-
 </body>
 </html>
