@@ -1,90 +1,131 @@
-# BBGM Career Oracle — Assumptions & Limitations
-Last updated: 2026
+# BBGM Career Oracle — Assumptions & Design Decisions
 
-This file documents the key assumptions and configurable values used throughout
-the BBGM Career Oracle project. When changing any of these, note that the Python
-import script AND the website's similarity algorithm may both need updating.
+Last updated: Phase 3 complete
 
 ---
 
-## Player Rating Scale
-- **OVR (Overall) range:** 20 to 80
-- **POT (Potential) range:** 20 to 80
-- **IQ range:** 20 to 80
-- Source: Matches the Basketball GM website's default rating scale.
+## Project Goal
+
+Compile a large database of simulated Basketball GM player careers,
+then let users input a player's attributes to receive a projected
+OVR trajectory based on historically similar players.
 
 ---
 
-## Career Eligibility Rules
-- Only players who were **DRAFTED within the simulation window** are included.
-- Only players who **RETIRED within the simulation window** are included.
-- Players who existed at league start (pre-generated veterans) are **excluded**.
-- Players still active when the simulation ends are **excluded**.
-- Reason: We need complete career arcs to build meaningful projections.
+## Simulation Settings
+
+- **Simulation length:** 20 years (chosen to maximize complete careers)
+- **Source:** basketball-gm.com (Tools → Export League → Players only)
+- **Export format:** JSON (Players only export — does NOT include gameAttributes)
 
 ---
 
-## Age Ranges
-- **Minimum draft age:** 18
-- **Maximum draft age:** 22
-- **Minimum retirement age:** 28
-- **Maximum retirement age:** 38
-- Note: Players can retire before 38 if their OVR drops below the threshold (see below).
+## What Counts as a "Complete Career"
+
+Only players meeting ALL of the following are added to the database:
+
+1. **Drafted within the simulation** — players with draft years before
+   the simulation's first season are pre-generated and excluded,
+   because we don't have their full early-career history.
+
+2. **Fully retired** — players with retiredYear = null are still active
+   and excluded. We only want careers with a beginning and an end.
+
+3. **Has rating data** — players with no ratings entries are excluded.
+
+### How the simulation window is detected
+
+Because "Players only" exports do not include gameAttributes, the
+import script infers the simulation start year from the earliest
+season that appears in any player's ratings array. The end year is
+inferred from the latest season in any player's ratings array.
 
 ---
 
-## Development & Decline (Fake Test Data Only)
-These values are used only by generate_fake_data.py to simulate realistic careers.
-Real BBGM import data will replace these with actual sim results.
+## Database Schema
 
-- **Years to reach peak after draft:** 3 to 7 years
-- **Peak OVR:** 85% to 100% of POT
-- **Annual OVR decline after peak:** 1.5 to 4.0 points per year
-- **Retirement OVR threshold:** 28 (player retires if OVR falls below this)
-- **Draft OVR range:** 20 to 60 (players are rarely elite straight out of draft)
-- **Minimum POT for drafted players:** 35
+Each player record contains:
+
+| Field       | Type             | Description                                  |
+|-------------|------------------|----------------------------------------------|
+| id          | integer          | Auto-incremented unique ID                   |
+| name        | string           | First + last name                            |
+| position    | string           | Position at draft time (from ratings[0].pos) |
+| height      | integer          | Height in inches                             |
+| draft_age   | integer          | draft.year minus born.year                   |
+| draft_ovr   | integer          | OVR rating at time of draft                  |
+| draft_pot   | integer          | POT rating at time of draft                  |
+| iq          | integer          | Average of oiq and diq at draft time         |
+| retire_age  | integer          | retiredYear minus born.year                  |
+| peak_ovr    | integer          | Highest OVR reached during career            |
+| ovr_by_age  | array of objects | [{age, ovr}, ...] sorted by age              |
+
+### Notes on specific fields
+
+- **position**: The top-level `pos` field in BBGM Players-only exports
+  is always null. Position is read from ratings[0].pos instead.
+- **draft_age**: The `draft.age` field in BBGM exports is always null.
+  Age is calculated as draft.year - born.year.
+- **iq**: BBGM stores offensive IQ (oiq) and defensive IQ (diq)
+  separately. We average both and round to the nearest integer.
+- **OVR/POT/IQ scale**: 20–80, matching BBGM's native scale.
 
 ---
 
-## Positions
-Valid positions: PG, SG, SF, PF, C
+## Similarity Attributes (planned, Phase 5)
 
----
+Matching priority order:
 
-## Height Ranges by Position (in inches)
-- **PG:** 70 to 76 inches  (5'10" to 6'4")
-- **SG:** 74 to 78 inches  (6'2" to 6'6")
-- **SF:** 76 to 80 inches  (6'4" to 6'8")
-- **PF:** 78 to 83 inches  (6'6" to 6'11")
-- **C:**  81 to 87 inches  (6'9" to 7'3")
-
----
-
-## Similarity Algorithm Attributes (in priority order)
-1. OVR at the queried age (primary anchor)
-2. POT at the queried age
-3. Age (must match — this is the comparison anchor)
-4. Position (used as a pre-filter)
+1. Position (filter first — only compare same position)
+2. Age (the anchor — find historical players at the same age)
+3. OVR
+4. POT
 5. Height
 6. IQ
 
----
-
-## Projection Output
-- Lines shown: 25th percentile, 50th percentile, 75th percentile, 95th percentile
-- Chart type: OVR by age (x = age, y = OVR)
+Start simple; add more attributes as the database grows.
 
 ---
 
-## Database Format
-- Storage: players.json (hosted on GitHub at /data/players.json)
-- Format: JSON array of player objects
-- Each player has: id, name, position, height, draft_age, draft_ovr,
-  draft_pot, iq, retire_age, peak_ovr, ovr_by_age (array of age/ovr pairs)
+## Projection Output (planned, Phase 5)
+
+- OVR-by-age graph with four percentile lines: 25th, 50th, 75th, 95th
+- User inputs: OVR, POT, age, position, height, IQ
 
 ---
 
-## Notes / Open Questions
-- Should IQ be weighted differently than height in similarity matching? TBD.
-- Should we track per-age POT, or only draft-time POT? Currently: draft-time only.
-- Height is stored in inches. Display conversion to feet/inches is handled by the frontend.
+## File Locations
+
+| File                | Purpose                                     |
+|---------------------|---------------------------------------------|
+| data/players.json   | The real player database (target for imports)|
+| players.json        | Root-level duplicate — ignore               |
+| import_bbgm.py      | Python script to import BBGM exports        |
+| generate_fake_data.py | Generates fake test players (Phase 2)     |
+| index.html          | Website front page                          |
+
+---
+
+## Known Observations from First Real Import
+
+- First import (League 3, 2026–2047 sim): **812 complete careers**
+- 540 players skipped as pre-generated (drafted before sim start)
+- 868 players skipped as still active
+- Draft ages observed: 19–22
+- Retirement ages observed: 26–38
+- Draft OVR observed: 12–58
+- Positions in dataset: C, F, FC, G, GF, PF, PG, SF, SG
+
+---
+
+## Import Workflow (for adding future simulations)
+
+1. Run a 20-year BBGM simulation at basketball-gm.com
+2. Export: Tools → Export League → select "Players" only
+3. Save the exported JSON file to your Downloads folder
+4. Open Command Prompt and navigate to the project folder:
+       cd C:\Users\travi\OneDrive\Desktop\Website\bbgm-oracle
+5. Run:
+       python import_bbgm.py "C:\Users\travi\Downloads\your_export.json"
+6. The script appends new players to data/players.json automatically
+7. Upload the updated data/players.json to GitHub
