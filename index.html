@@ -1,1 +1,630 @@
-<!DOCTYPE html> <html> <head><title>BBGM Career Oracle</title></head> <body> <h1>BBGM Career Oracle</h1> <p>Coming soon.</p> </body> </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BBGM Career Oracle</title>
+  <style>
+    /* ── Tokens ─────────────────────────────────────────── */
+    :root {
+      --bg:          #0f1117;
+      --surface:     #1a1d27;
+      --border:      #2a2e3f;
+      --accent:      #4a8fe8;
+      --accent-dim:  #2a5a9e;
+      --text:        #e2e6f0;
+      --text-muted:  #7a8099;
+      --green:       #3ecf8e;
+      --red:         #e25c5c;
+      --radius:      8px;
+      --font-mono:   'Courier New', monospace;
+    }
+
+    /* ── Reset ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ──────────────────────────────────────────── */
+    .page-wrap {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── Header ──────────────────────────────────────────── */
+    header {
+      margin-bottom: 40px;
+    }
+
+    .wordmark {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .wordmark-bbgm {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .wordmark-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 14px;
+      max-width: 480px;
+    }
+
+    /* ── Card ────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Form layout ─────────────────────────────────────── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field.full-width {
+      grid-column: 1 / -1;
+    }
+
+    /* Height gets two small boxes side by side */
+    .height-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .height-group input {
+      width: 64px;
+    }
+
+    .height-sep {
+      color: var(--text-muted);
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    /* ── Labels ──────────────────────────────────────────── */
+    label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    /* ── Inputs / Selects ────────────────────────────────── */
+    input[type="number"],
+    select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 15px;
+      padding: 8px 12px;
+      width: 100%;
+      transition: border-color 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="number"]:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(74,143,232,0.15);
+    }
+
+    input[type="number"]::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Remove spinner arrows */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type="number"] { -moz-appearance: textfield; }
+
+    /* Select arrow */
+    .select-wrap {
+      position: relative;
+    }
+
+    .select-wrap::after {
+      content: '▾';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+      font-size: 12px;
+    }
+
+    .select-wrap select {
+      padding-right: 32px;
+      cursor: pointer;
+    }
+
+    /* Unit labels that sit next to height boxes */
+    .unit-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    /* Range hints below number inputs */
+    .hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ── Divider ─────────────────────────────────────────── */
+    .divider {
+      grid-column: 1 / -1;
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    /* ── Submit button ───────────────────────────────────── */
+    .submit-row {
+      grid-column: 1 / -1;
+      margin-top: 8px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary:hover {
+      background: #5b9ffa;
+    }
+
+    .btn-primary:active {
+      background: var(--accent-dim);
+    }
+
+    /* ── Result area ─────────────────────────────────────── */
+    #result {
+      margin-top: 24px;
+      padding: 20px 24px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: none;
+    }
+
+    #result.visible {
+      display: block;
+    }
+
+    .result-coming-soon {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .result-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    .result-text h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .result-text p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .result-summary {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .summary-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .summary-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .summary-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Validation ──────────────────────────────────────── */
+    input.invalid,
+    select.invalid {
+      border-color: var(--red);
+    }
+
+    .error-msg {
+      font-size: 11px;
+      color: var(--red);
+      margin-top: 2px;
+      display: none;
+    }
+
+    .error-msg.visible {
+      display: block;
+    }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    footer {
+      margin-top: 48px;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* ── Responsive ──────────────────────────────────────── */
+    @media (max-width: 520px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .field.full-width {
+        grid-column: 1;
+      }
+
+      .submit-row {
+        grid-column: 1;
+      }
+
+      .divider {
+        grid-column: 1;
+      }
+
+      .result-summary {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <header>
+    <div class="wordmark">
+      <span class="wordmark-bbgm">BBGM</span>
+      <span class="wordmark-title">Career Oracle</span>
+    </div>
+    <p>Enter a player's draft-day attributes to see how similar players' careers developed — projected OVR by age, from a database of simulated careers.</p>
+  </header>
+
+  <div class="card">
+    <div class="card-title">Player Attributes</div>
+
+    <div class="form-grid">
+
+      <!-- OVR -->
+      <div class="field">
+        <label for="ovr">Overall Rating (OVR)</label>
+        <input
+          type="number"
+          id="ovr"
+          name="ovr"
+          min="20" max="80"
+          placeholder="e.g. 48"
+          autocomplete="off"
+        />
+        <span class="hint">20 – 80</span>
+        <span class="error-msg" id="ovr-error">Enter a value between 20 and 80.</span>
+      </div>
+
+      <!-- POT -->
+      <div class="field">
+        <label for="pot">Potential (POT)</label>
+        <input
+          type="number"
+          id="pot"
+          name="pot"
+          min="20" max="80"
+          placeholder="e.g. 65"
+          autocomplete="off"
+        />
+        <span class="hint">20 – 80</span>
+        <span class="error-msg" id="pot-error">Enter a value between 20 and 80.</span>
+      </div>
+
+      <!-- Age -->
+      <div class="field">
+        <label for="age">Draft Age</label>
+        <input
+          type="number"
+          id="age"
+          name="age"
+          min="18" max="22"
+          placeholder="e.g. 19"
+          autocomplete="off"
+        />
+        <span class="hint">18 – 22</span>
+        <span class="error-msg" id="age-error">Enter a value between 18 and 22.</span>
+      </div>
+
+      <!-- IQ -->
+      <div class="field">
+        <label for="iq">IQ</label>
+        <input
+          type="number"
+          id="iq"
+          name="iq"
+          min="20" max="80"
+          placeholder="e.g. 50"
+          autocomplete="off"
+        />
+        <span class="hint">20 – 80</span>
+        <span class="error-msg" id="iq-error">Enter a value between 20 and 80.</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Position -->
+      <div class="field">
+        <label for="position">Position</label>
+        <div class="select-wrap">
+          <select id="position" name="position">
+            <option value="" disabled selected>Select position</option>
+            <option value="PG">PG — Point Guard</option>
+            <option value="SG">SG — Shooting Guard</option>
+            <option value="SF">SF — Small Forward</option>
+            <option value="PF">PF — Power Forward</option>
+            <option value="C">C — Center</option>
+          </select>
+        </div>
+        <span class="error-msg" id="position-error">Please select a position.</span>
+      </div>
+
+      <!-- Height -->
+      <div class="field">
+        <label>Height</label>
+        <div class="height-group">
+          <input
+            type="number"
+            id="height-ft"
+            name="height-ft"
+            min="5" max="7"
+            placeholder="6"
+            autocomplete="off"
+            aria-label="Feet"
+          />
+          <span class="unit-label">ft</span>
+          <input
+            type="number"
+            id="height-in"
+            name="height-in"
+            min="0" max="11"
+            placeholder="4"
+            autocomplete="off"
+            aria-label="Inches"
+          />
+          <span class="unit-label">in</span>
+        </div>
+        <span class="hint">5 ft 0 in – 7 ft 6 in</span>
+        <span class="error-msg" id="height-error">Enter a valid height (feet 5–7, inches 0–11).</span>
+      </div>
+
+      <!-- Submit -->
+      <div class="submit-row">
+        <button class="btn-primary" id="submit-btn" type="button">
+          Project Career
+        </button>
+      </div>
+
+    </div><!-- /form-grid -->
+
+    <!-- Result area -->
+    <div id="result">
+      <div class="result-coming-soon">
+        <div class="result-icon">🏀</div>
+        <div class="result-text">
+          <h3>Projection coming soon</h3>
+          <p>The similarity engine and OVR trajectory chart are under development. Check back soon — the database is growing.</p>
+        </div>
+      </div>
+      <div class="result-summary" id="result-summary">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+  </div><!-- /card -->
+
+  <footer>
+    Powered by simulated careers from <a href="https://basketball-gm.com" target="_blank" rel="noopener">basketball-gm.com</a> &nbsp;·&nbsp;
+    <a href="https://github.com/BBGM-Oracle/bbgm-oracle" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+
+</div><!-- /page-wrap -->
+
+<script>
+  // ── Field definitions ────────────────────────────────────
+  const fields = [
+    { id: 'ovr',      min: 20, max: 80, label: 'OVR'       },
+    { id: 'pot',      min: 20, max: 80, label: 'POT'       },
+    { id: 'age',      min: 18, max: 22, label: 'Age'       },
+    { id: 'iq',       min: 20, max: 80, label: 'IQ'        },
+  ];
+
+  // ── Validation helpers ───────────────────────────────────
+  function setInvalid(id, show) {
+    const el  = document.getElementById(id);
+    const err = document.getElementById(id + '-error');
+    if (!el) return;
+    el.classList.toggle('invalid', show);
+    if (err) err.classList.toggle('visible', show);
+  }
+
+  function validateAll() {
+    let ok = true;
+
+    // Numeric fields
+    for (const f of fields) {
+      const el  = document.getElementById(f.id);
+      const val = parseInt(el.value, 10);
+      const bad = isNaN(val) || val < f.min || val > f.max;
+      setInvalid(f.id, bad);
+      if (bad) ok = false;
+    }
+
+    // Position
+    const pos = document.getElementById('position');
+    const posBad = !pos.value;
+    pos.classList.toggle('invalid', posBad);
+    document.getElementById('position-error').classList.toggle('visible', posBad);
+    if (posBad) ok = false;
+
+    // Height
+    const ft  = parseInt(document.getElementById('height-ft').value, 10);
+    const inc = parseInt(document.getElementById('height-in').value, 10);
+    const htBad = isNaN(ft) || isNaN(inc) || ft < 5 || ft > 7 || inc < 0 || inc > 11;
+    document.getElementById('height-ft').classList.toggle('invalid', htBad);
+    document.getElementById('height-in').classList.toggle('invalid', htBad);
+    document.getElementById('height-error').classList.toggle('visible', htBad);
+    if (htBad) ok = false;
+
+    return ok;
+  }
+
+  // Clear error on input
+  for (const f of fields) {
+    document.getElementById(f.id).addEventListener('input', () => setInvalid(f.id, false));
+  }
+  document.getElementById('position').addEventListener('change', () => {
+    document.getElementById('position').classList.remove('invalid');
+    document.getElementById('position-error').classList.remove('visible');
+  });
+  ['height-ft','height-in'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      document.getElementById('height-ft').classList.remove('invalid');
+      document.getElementById('height-in').classList.remove('invalid');
+      document.getElementById('height-error').classList.remove('visible');
+    });
+  });
+
+  // ── Submit ───────────────────────────────────────────────
+  document.getElementById('submit-btn').addEventListener('click', () => {
+    if (!validateAll()) return;
+
+    const ovr = document.getElementById('ovr').value;
+    const pot = document.getElementById('pot').value;
+    const age = document.getElementById('age').value;
+    const iq  = document.getElementById('iq').value;
+    const pos = document.getElementById('position').value;
+    const ft  = document.getElementById('height-ft').value;
+    const inc = document.getElementById('height-in').value;
+
+    // Show coming-soon result with a summary of what was entered
+    const summary = document.getElementById('result-summary');
+    summary.innerHTML = `
+      <div class="summary-item">
+        <span class="summary-label">Position</span>
+        <span class="summary-value">${pos}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Height</span>
+        <span class="summary-value">${ft}'${inc}"</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Age</span>
+        <span class="summary-value">${age}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">OVR</span>
+        <span class="summary-value">${ovr}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">POT</span>
+        <span class="summary-value">${pot}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">IQ</span>
+        <span class="summary-value">${iq}</span>
+      </div>
+    `;
+
+    const result = document.getElementById('result');
+    result.classList.add('visible');
+    result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+</script>
+
+</body>
+</html>
