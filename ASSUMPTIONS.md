@@ -131,3 +131,14 @@ Each player record in `data/players.json` contains:
 ---
 
 *Last updated: Phase 5 complete.*
+
+## Phase 6 Notes
+
+- BBGM assigns 9 distinct positions: PG, SG, G, GF, SF, F, PF, FC, C. The position 
+  dropdown was updated in Phase 6 to include all 9. Earlier versions only included the 
+  5 "pure" positions, leaving ~47% of the database unmatchable.
+
+- At high ages (e.g., 37+), percentile curves converge because very few matched players 
+  have data at those ages. A fix (minimum players-per-age threshold before plotting) has 
+  been deferred. To implement: filter out any age from the chart data where fewer than N 
+  players (suggested: 3–5) have an OVR value, so lines end naturally rather than converging.
