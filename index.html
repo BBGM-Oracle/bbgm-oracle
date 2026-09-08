@@ -445,13 +445,32 @@ let playerDB = [];
 
 async function loadDatabase() {
   try {
+    // Try manifest-based chunked loading first (new format)
+    const manifestRes = await fetch('data/players_manifest.json');
+    if (manifestRes.ok) {
+      const manifest = await manifestRes.json();
+      let allPlayers = [];
+      for (const chunkFile of manifest.chunks) {
+        const res = await fetch('data/' + chunkFile);
+        if (!res.ok) throw new Error('Could not load chunk: ' + chunkFile);
+        const chunk = await res.json();
+        allPlayers = allPlayers.concat(chunk);
+      }
+      playerDB = allPlayers;
+      return;
+    }
+  } catch (e) {
+    console.warn('Chunk loading failed, trying legacy format...', e);
+  }
+  // Fall back to legacy single-file format
+  try {
     const res = await fetch('data/players.json');
     if (!res.ok) throw new Error('fetch failed');
     const json = await res.json();
     playerDB = Array.isArray(json) ? json : [];
   } catch (e) {
     playerDB = [];
-    console.warn('Could not load data/players.json — running with empty database.', e);
+    console.warn('Could not load player database.', e);
   }
 }
 
