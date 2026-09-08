@@ -57,11 +57,13 @@ Only the first listed position is used. Full multi-position support (e.g. "PG-SG
 ---
 
 ## Database Schema
-**File:** `data/players.json`
+**Primary files:** `data/players_manifest.json` + `data/players_001.json`, `players_002.json`, etc.
+**Legacy file (no longer used):** `data/players.json`
 
 | Field       | Description                                      |
 |-------------|--------------------------------------------------|
 | id          | Auto-incrementing integer (internal DB key)      |
+| sim_id      | Simulation name this player came from (e.g. Sim_1) — added in v2.1 |
 | name        | Full player name                                 |
 | position    | Position string from ratings[0].pos              |
 | height      | Total inches (converted from BBGM hgt 0–100)     |
@@ -73,6 +75,8 @@ Only the first listed position is used. Full multi-position support (e.g. "PG-SG
 | peak_ovr    | Highest OVR achieved across entire career        |
 | ovr_by_age  | Dictionary of {age: ovr} across career           |
 
+**Note:** Players imported before v2.1 do not have a `sim_id` field. This is expected and does not affect the website.
+
 **Height formula:** `round(66 + (hgt / 100) * 24)` → maps 0–100 to ~66–90 inches
 
 ---
@@ -83,34 +87,51 @@ All nine BBGM positions: **PG, SG, G, GF, SF, F, PF, FC, C**
 
 ---
 
-## Import Workflow (Phase 7)
+## Database File Format (Chunked)
+
+### Why chunked?
+GitHub's web interface cannot upload files larger than 25 MB. As the database grows, a single `players.json` exceeds this limit.
+
+### How it works
+- The import script splits all players into chunk files of 50,000 players each
+- Each chunk is saved as minified JSON (no spaces/indentation) to minimize file size
+- At ~300 bytes per player (minified), 50,000 players ≈ 15 MB per chunk — safely under GitHub's limit
+- A manifest file (`players_manifest.json`) lists all chunk filenames
+- The website loads the manifest first, then fetches each chunk and combines them invisibly
+- The similarity algorithm sees one unified list of players — it never knows about chunks
+
+### Manifest format
+```json
+{
+  "chunks": ["players_001.json", "players_002.json"],
+  "total_players": 100000,
+  "last_updated": "2026-09-07"
+}
+```
+
+### Backwards compatibility
+If no manifest exists, the website falls back to loading `players.json` directly.
+The import script also falls back to reading `players.json` if no chunks exist yet.
+
+---
+
+## Import Workflow
 
 ### Tools
-| File                     | Location        | Purpose                                          |
-|--------------------------|-----------------|--------------------------------------------------|
-| `import_bbgm.py`         | Local only       | Main import script                               |
-| `run_import.bat`         | Local only       | Double-click launcher for the import script      |
-| `data/imports_log.json`  | Local only       | Tracks imported player IDs per simulation        |
-| `data/players.json`      | GitHub + Local   | The database — upload to GitHub after each import|
+| File                        | Location       | Purpose                                              |
+|-----------------------------|----------------|------------------------------------------------------|
+| `import_bbgm.py`            | Local only     | Main import script                                   |
+| `run_import.bat`            | Local only     | Double-click launcher                                |
+| `data/imports_log.json`     | Local only     | Tracks imported player IDs per simulation            |
+| `data/players_manifest.json`| GitHub + Local | Lists chunk filenames; upload after every import     |
+| `data/players_001.json` etc.| GitHub + Local | Player data chunks; upload after every import        |
 
 ### Standard Import Steps
 1. Run a BBGM simulation and download the JSON export
-2. Move the export file into the `exports/` folder (never delete these — they are the source of truth)
+2. Move the export file into the `exports/` folder (never delete — source of truth)
 3. Double-click `run_import.bat`
-4. Follow the on-screen prompts
-5. Upload the updated `data/players.json` to GitHub
-
-### Multi-Simulation Deduplication
-- Each simulation is given a user-defined name (e.g. "Sim_1", "Sim_2")
-- Player uniqueness is determined by `(simulation_name, bbgm_pid)`
-- Re-importing the same simulation at a later year adds only new retirees — no duplicates
-- Different simulations with overlapping BBGM pids are treated as separate players
-
-### First-Time Setup (runs automatically, one time only)
-When `imports_log.json` doesn't exist, the script:
-1. Asks the user to name their existing simulation
-2. Scans all files in `exports/` to register already-imported player IDs
-3. Creates `imports_log.json` automatically
+4. Follow on-screen prompts
+5. Upload the files listed in the "UPLOAD THESE FILES TO GITHUB" summary to GitHub
 
 ### Files to NEVER Upload to GitHub
 - `import_bbgm.py`
@@ -118,11 +139,18 @@ When `imports_log.json` doesn't exist, the script:
 - `data/imports_log.json`
 - Anything in the `exports/` folder
 
+### Multi-Simulation Deduplication
+- Each simulation is given a user-defined name (e.g. "Sim_1", "Sim_2")
+- Player uniqueness is determined by `(simulation_name, bbgm_pid)`
+- Re-importing the same simulation at a later year adds only new retirees
+- Different simulations with overlapping BBGM pids are treated as separate players
+- All simulations are combined into one unified pool for the website
+
 ---
 
 ## Tech Stack
 - **Frontend:** HTML/CSS/JavaScript, Chart.js v4 (CDN) — all in `index.html`
-- **Data pipeline:** Python 3.x scripts, run locally on Windows via Command Prompt or .bat file
+- **Data pipeline:** Python 3.x scripts, run locally on Windows via `.bat` launcher
 - **Hosting:** GitHub Pages (free static hosting)
 - **Data source:** basketball-gm.com JSON simulation exports
 
@@ -133,7 +161,7 @@ When `imports_log.json` doesn't exist, the script:
 ### Age-37 Curve Convergence
 All four percentile curves converge near age 37 due to insufficient player data at high ages.
 - **Proposed fix:** Enforce a minimum players-per-age threshold (3–5 players) before plotting that age point
-- **Status:** Deferred to a future phase
+- **Status:** Deferred — database is still growing
 
 ---
 
@@ -147,3 +175,4 @@ All four percentile curves converge near age 37 due to insufficient player data 
 | 5     | Similarity algorithm + Chart.js projection graph         | ✓      |
 | 6     | Live site testing + position dropdown fix (9 positions)  | ✓      |
 | 7     | Multi-simulation support, deduplication, .bat launcher   | ✓      |
+| 7b    | Minified + chunked output; sim_id field; migration tool  | ✓      |
