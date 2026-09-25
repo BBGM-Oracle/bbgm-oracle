@@ -553,7 +553,7 @@ function buildProjection(similarPlayers) {
   // Gather all ages present across any player
   const ageSet = new Set();
   similarPlayers.forEach(p => {
-    (p.ovr_by_age || []).forEach(pt => ageSet.add(pt.age));
+    if (Array.isArray(p.ovr_by_age)) { p.ovr_by_age.forEach(pt => ageSet.add(pt.age)); }
   });
   const ages = Array.from(ageSet).sort((a, b) => a - b);
 
@@ -563,7 +563,7 @@ function buildProjection(similarPlayers) {
     // Collect OVR values at this age from each player who has data for it
     const vals = [];
     similarPlayers.forEach(p => {
-      const pt = (p.ovr_by_age || []).find(x => x.age === age);
+      const pt = Array.isArray(p.ovr_by_age) ? p.ovr_by_age.find(x => x.age === age) : undefined;
       if (pt !== undefined) vals.push(pt.ovr);
     });
 
