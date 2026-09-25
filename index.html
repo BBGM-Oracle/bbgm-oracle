@@ -409,17 +409,6 @@
 
       <div class="match-note" id="match-note"></div>
 
-      <!-- Phase 9 Export Button -->
-      <div style="text-align:right; margin-top:12px;">
-        <button id="phase9ExportBtn"
-          onclick="exportPredictionCSV()"
-          style="display:none; padding:9px 18px; background:#2E75B6; color:#fff;
-                 font-size:0.85rem; font-weight:600; border:none; border-radius:7px;
-                 cursor:pointer;">
-          &#128229; Export Prediction CSV (Phase 9)
-        </button>
-      </div>
-
     </div><!-- /result-area -->
 
   </div><!-- /output card -->
@@ -761,7 +750,6 @@ function getAndValidateInputs() {
 // ═══════════════════════════════════════════════════════════════
 function showLoading()  {
   document.getElementById('placeholder').style.display  = 'none';
-  document.getElementById('phase9ExportBtn').style.display = 'none';
   document.getElementById('result-area').style.display  = 'none';
   document.getElementById('loading').style.display      = 'block';
 }
@@ -835,7 +823,6 @@ async function runProjection() {
 
   // Render chart
   renderChart(projection);
-  document.getElementById('phase9ExportBtn').style.display = 'inline-block';
 
   // Update summary
   fillSummary(query, similar.length);
@@ -848,71 +835,6 @@ async function runProjection() {
 // ═══════════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════════
-// ================================================================
-// PHASE 9 -- Export current prediction to CSV
-// Writes: <POS>_Age<N>_OVR<N>_POT<N>_prediction.csv
-// After downloading, rename the file to match the player's BBGM
-// name before placing it in phase9/website_exports/.
-// Example: rename to  John_Smith_prediction.csv
-// ================================================================
-function exportPredictionCSV() {
-  if (!chartInstance || !chartInstance.data || !chartInstance.data.labels) {
-    alert("Please generate a projection first, then click Export.");
-    return;
-  }
-
-  const labels   = chartInstance.data.labels;   // ["Age 18", "Age 19", ...]
-  const datasets = chartInstance.data.datasets;
-
-  // Locate the four percentile series by their label text
-  let d25 = null, d50 = null, d75 = null, d95 = null;
-  for (const ds of datasets) {
-    const lbl = String(ds.label || "");
-    if      (lbl.includes("95")) d95 = ds.data;
-    else if (lbl.includes("75")) d75 = ds.data;
-    else if (lbl.includes("50")) d50 = ds.data;
-    else if (lbl.includes("25")) d25 = ds.data;
-  }
-
-  if (!d25 || !d50 || !d75 || !d95) {
-    alert("Could not locate all four percentile curves. Make sure a projection ran successfully.");
-    return;
-  }
-
-  // Build CSV rows as an array, then join with newline characters
-  const safe = v => (v !== null && v !== undefined) ? Number(v).toFixed(1) : "";
-  const rows = ["Age,25th,50th,75th,95th"];
-  for (let i = 0; i < labels.length; i++) {
-    const age = labels[i].replace("Age ", "");
-    rows.push(
-      age + "," +
-      safe(d25[i]) + "," +
-      safe(d50[i]) + "," +
-      safe(d75[i]) + "," +
-      safe(d95[i])
-    );
-  }
-  const csv = rows.join("\n") + "\n";
-
-  // Build filename from form inputs
-  const pos      = document.getElementById('inp-pos').value;
-  const draftAge = document.getElementById('inp-age').value;
-  const ovr      = document.getElementById('inp-ovr').value;
-  const pot      = document.getElementById('inp-pot').value;
-  const filename = pos + "_Age" + draftAge + "_OVR" + ovr + "_POT" + pot + "_prediction.csv";
-
-  // Trigger download in the browser
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href     = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
 document.getElementById('btn-project').addEventListener('click', runProjection);
 
 // Load the database on page open
