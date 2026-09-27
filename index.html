@@ -407,6 +407,14 @@
         <canvas id="proj-chart"></canvas>
       </div>
 
+      <div style="text-align:center; margin-top:16px;">
+        <button id="btn-export-phase9" type="button"
+          style="padding:10px 20px; border-radius:8px; border:1px solid #2a3045;
+                 background:#1e2333; color:#e8eaf0; cursor:pointer; font-size:14px;">
+          Export Prediction CSV (Phase 9)
+        </button>
+      </div>
+
       <div class="match-note" id="match-note"></div>
 
     </div><!-- /result-area -->
@@ -827,6 +835,10 @@ async function runProjection() {
   // Update summary
   fillSummary(query, similar.length);
 
+  // Stash for Phase 9 CSV export
+  window.lastProjection = projection;
+  window.lastQuery = query;
+
   // Swap loading → results
   hideLoading();
   document.getElementById('result-area').style.display = 'block';
@@ -836,6 +848,49 @@ async function runProjection() {
 // BOOT
 // ═══════════════════════════════════════════════════════════════
 document.getElementById('btn-project').addEventListener('click', runProjection);
+
+// ═══════════════════════════════════════════════════════════════
+// PHASE 9 — EXPORT PREDICTION CSV
+// ═══════════════════════════════════════════════════════════════
+function exportPredictionCSV() {
+  if (!window.lastProjection || !window.lastQuery) {
+    alert('Run a projection first before exporting.');
+    return;
+  }
+
+  const projection = window.lastProjection;
+  const query = window.lastQuery;
+
+  // Build CSV rows: Age,25th,50th,75th,95th
+  const rows = [['Age', '25th', '50th', '75th', '95th']];
+  projection.ages.forEach((age, i) => {
+    rows.push([
+      age,
+      projection.p25[i] !== null && projection.p25[i] !== undefined ? Math.round(projection.p25[i]) : '',
+      projection.p50[i] !== null && projection.p50[i] !== undefined ? Math.round(projection.p50[i]) : '',
+      projection.p75[i] !== null && projection.p75[i] !== undefined ? Math.round(projection.p75[i]) : '',
+      projection.p95[i] !== null && projection.p95[i] !== undefined ? Math.round(projection.p95[i]) : ''
+    ]);
+  });
+
+  const csvContent = rows.map(r => r.join(',')).join('\n');
+
+  // Attribute-based filename, e.g. PG_Age19_OVR45_POT67_prediction.csv
+  const filename = `${query.position}_Age${query.age}_OVR${query.ovr}_POT${query.pot}_prediction.csv`;
+
+  // Trigger browser download
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('btn-export-phase9').addEventListener('click', exportPredictionCSV);
 
 // Load the database on page open
 loadDatabase().catch(console.error);
