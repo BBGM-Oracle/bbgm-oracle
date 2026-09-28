@@ -297,15 +297,22 @@
         <span class="hint">18 – 22</span>
       </div>
 
-      <!-- IQ -->
+      <!-- Offensive IQ -->
       <div class="field">
-        <label for="inp-iq">IQ</label>
-        <input type="number" id="inp-iq" min="20" max="80" value="50" />
+        <label for="inp-oiq">Offensive IQ (OIQ)</label>
+        <input type="number" id="inp-oiq" min="20" max="80" value="50" />
+        <span class="hint">20 – 80</span>
+      </div>
+
+      <!-- Defensive IQ -->
+      <div class="field">
+        <label for="inp-diq">Defensive IQ (DIQ)</label>
+        <input type="number" id="inp-diq" min="20" max="80" value="50" />
         <span class="hint">20 – 80</span>
       </div>
 
       <!-- Position (full width) -->
-      <div class="field full">
+      <div class="field">
         <label for="inp-pos">Position</label>
         <select id="inp-pos">
           <option value="PG">PG</option>
@@ -384,8 +391,12 @@
           <span class="value" id="res-pot">—</span>
         </div>
         <div class="stat-cell">
-          <span class="label">IQ</span>
-          <span class="value" id="res-iq">—</span>
+          <span class="label">OIQ</span>
+          <span class="value" id="res-oiq">—</span>
+        </div>
+        <div class="stat-cell">
+          <span class="label">DIQ</span>
+          <span class="value" id="res-diq">—</span>
         </div>
       </div>
 
@@ -436,7 +447,8 @@ const WEIGHTS = {
   ovr:    0.30,
   pot:    0.25,
   age:    0.25,
-  iq:     0.10,
+  oiq:    0.05,
+  diq:    0.05,
   height: 0.10
 };
 
@@ -501,7 +513,8 @@ const RANGES = {
   ovr:    { min: 20, max: 80 },
   pot:    { min: 20, max: 80 },
   age:    { min: 18, max: 22 },
-  iq:     { min: 20, max: 80 },
+  oiq:    { min: 20, max: 80 },
+  diq:    { min: 20, max: 80 },
   height: { min: 60, max: 90 } // inches: 5'0" to 7'6"
 };
 
@@ -514,14 +527,16 @@ function similarityScore(query, player) {
   const dOvr    = Math.abs(norm(query.ovr,    RANGES.ovr.min,    RANGES.ovr.max)    - norm(player.draft_ovr, RANGES.ovr.min,    RANGES.ovr.max));
   const dPot    = Math.abs(norm(query.pot,    RANGES.pot.min,    RANGES.pot.max)    - norm(player.draft_pot, RANGES.pot.min,    RANGES.pot.max));
   const dAge    = Math.abs(norm(query.age,    RANGES.age.min,    RANGES.age.max)    - norm(player.draft_age, RANGES.age.min,    RANGES.age.max));
-  const dIq     = Math.abs(norm(query.iq,     RANGES.iq.min,     RANGES.iq.max)     - norm(player.iq,        RANGES.iq.min,     RANGES.iq.max));
+  const dOiq    = Math.abs(norm(query.oiq,    RANGES.oiq.min,    RANGES.oiq.max)    - norm(player.oiq,       RANGES.oiq.min,    RANGES.oiq.max));
+  const dDiq    = Math.abs(norm(query.diq,    RANGES.diq.min,    RANGES.diq.max)    - norm(player.diq,       RANGES.diq.min,    RANGES.diq.max));
   const dHeight = Math.abs(norm(query.height, RANGES.height.min, RANGES.height.max) - norm(player.height,    RANGES.height.min, RANGES.height.max));
 
   return (
     WEIGHTS.ovr    * dOvr    +
     WEIGHTS.pot    * dPot    +
     WEIGHTS.age    * dAge    +
-    WEIGHTS.iq     * dIq     +
+    WEIGHTS.oiq    * dOiq    +
+    WEIGHTS.diq    * dDiq    +
     WEIGHTS.height * dHeight
   );
 }
@@ -712,7 +727,8 @@ function getAndValidateInputs() {
   const ovr = readNum('inp-ovr', 20, 80, 'OVR');
   const pot = readNum('inp-pot', 20, 80, 'POT');
   const age = readNum('inp-age', 18, 22, 'Draft Age');
-  const iq  = readNum('inp-iq',  20, 80, 'IQ');
+  const oiq = readNum('inp-oiq', 20, 80, 'Offensive IQ');
+  const diq = readNum('inp-diq', 20, 80, 'Defensive IQ');
   const ft  = readNum('inp-ft',   5,  7, 'Feet');
   const inc = readNum('inp-in',   0, 11, 'Inches');
 
@@ -744,7 +760,8 @@ function getAndValidateInputs() {
       ovr,
       pot,
       age,
-      iq,
+      oiq,
+      diq,
       height: feetInchesToInches(ft, inc),
       position,
       ft,
@@ -771,7 +788,8 @@ function fillSummary(query, matchCount) {
   document.getElementById('res-age').textContent = query.age;
   document.getElementById('res-ovr').textContent = query.ovr;
   document.getElementById('res-pot').textContent = query.pot;
-  document.getElementById('res-iq').textContent  = query.iq;
+  document.getElementById('res-oiq').textContent = query.oiq;
+  document.getElementById('res-diq').textContent = query.diq;
 
   const note = document.getElementById('match-note');
   note.textContent = `Based on ${matchCount} similar player${matchCount === 1 ? '' : 's'} in the database`;
@@ -862,21 +880,23 @@ function exportPredictionCSV() {
   const query = window.lastQuery;
 
   // Build CSV rows: Age,25th,50th,75th,95th
-  const rows = [['Age', '25th', '50th', '75th', '95th']];
+  const rows = [['Age', '25th', '50th', '75th', '95th', 'OIQ', 'DIQ']];
   projection.ages.forEach((age, i) => {
     rows.push([
       age,
       projection.p25[i] !== null && projection.p25[i] !== undefined ? Math.round(projection.p25[i]) : '',
       projection.p50[i] !== null && projection.p50[i] !== undefined ? Math.round(projection.p50[i]) : '',
       projection.p75[i] !== null && projection.p75[i] !== undefined ? Math.round(projection.p75[i]) : '',
-      projection.p95[i] !== null && projection.p95[i] !== undefined ? Math.round(projection.p95[i]) : ''
+      projection.p95[i] !== null && projection.p95[i] !== undefined ? Math.round(projection.p95[i]) : '',
+      query.oiq,
+      query.diq
     ]);
   });
 
   const csvContent = rows.map(r => r.join(',')).join('\n');
 
-  // Attribute-based filename, e.g. PG_Age19_OVR45_POT67_prediction.csv
-  const filename = `${query.position}_Age${query.age}_OVR${query.ovr}_POT${query.pot}_prediction.csv`;
+  // Attribute-based filename, e.g. PG_Age19_OVR45_POT67_OIQ50_DIQ40_prediction.csv
+  const filename = `${query.position}_Age${query.age}_OVR${query.ovr}_POT${query.pot}_OIQ${query.oiq}_DIQ${query.diq}_prediction.csv`;
 
   // Trigger browser download
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
