@@ -419,6 +419,14 @@
       </div>
 
       <div style="text-align:center; margin-top:16px;">
+        <label for="input-phase9-pid" style="display:block; margin-bottom:6px; font-size:13px; color:#9aa3b8;">
+          Phase 9 Reference ID (test player's pid - optional)
+        </label>
+        <input id="input-phase9-pid" type="text" placeholder="e.g. 147"
+          style="padding:8px 12px; border-radius:6px; border:1px solid #2a3045;
+                 background:#161a26; color:#e8eaf0; font-size:14px; width:140px;
+                 text-align:center; margin-bottom:10px;">
+        <br>
         <button id="btn-export-phase9" type="button"
           style="padding:10px 20px; border-radius:8px; border:1px solid #2a3045;
                  background:#1e2333; color:#e8eaf0; cursor:pointer; font-size:14px;">
@@ -573,10 +581,14 @@ function findSimilarPlayers(query) {
  * Returns: { ages: [...], p25: [...], p50: [...], p75: [...], p95: [...] }
  */
 function buildProjection(similarPlayers) {
-  // Gather all ages present across any player
+  // ovr_by_age is stored as a DICTIONARY: {"25": 74, "26": 76, ...}
+  // (string age -> ovr), not an array. Read it with Object.entries().
   const ageSet = new Set();
   similarPlayers.forEach(p => {
-    if (Array.isArray(p.ovr_by_age)) { p.ovr_by_age.forEach(pt => ageSet.add(pt.age)); }
+    const oba = p.ovr_by_age;
+    if (oba && typeof oba === 'object' && !Array.isArray(oba)) {
+      Object.keys(oba).forEach(ageStr => ageSet.add(Number(ageStr)));
+    }
   });
   const ages = Array.from(ageSet).sort((a, b) => a - b);
 
@@ -586,8 +598,11 @@ function buildProjection(similarPlayers) {
     // Collect OVR values at this age from each player who has data for it
     const vals = [];
     similarPlayers.forEach(p => {
-      const pt = Array.isArray(p.ovr_by_age) ? p.ovr_by_age.find(x => x.age === age) : undefined;
-      if (pt !== undefined) vals.push(pt.ovr);
+      const oba = p.ovr_by_age;
+      if (oba && typeof oba === 'object' && !Array.isArray(oba)) {
+        const ovr = oba[String(age)];
+        if (ovr !== undefined && ovr !== null) vals.push(ovr);
+      }
     });
 
     if (vals.length === 0) {
@@ -896,7 +911,10 @@ function exportPredictionCSV() {
   const csvContent = rows.map(r => r.join(',')).join('\n');
 
   // Attribute-based filename, e.g. PG_Age19_OVR45_POT67_OIQ50_DIQ40_prediction.csv
-  const filename = `${query.position}_Age${query.age}_OVR${query.ovr}_POT${query.pot}_OIQ${query.oiq}_DIQ${query.diq}_prediction.csv`;
+  const refBox = document.getElementById('input-phase9-pid');
+  const refRaw = refBox ? refBox.value.trim() : '';
+  const refTag = refRaw ? `_pid${refRaw.padStart(4, '0')}` : '_noID';
+  const filename = `${query.position}_Age${query.age}_OVR${query.ovr}_POT${query.pot}_OIQ${query.oiq}_DIQ${query.diq}${refTag}_prediction.csv`;
 
   // Trigger browser download
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
